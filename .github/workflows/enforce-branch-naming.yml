@@ -1,0 +1,20 @@
+name: Enforce Branch Naming
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check branch name
+        run: |
+          BRANCH_NAME=${{ github.event.pull_request.head.ref }}
+          REQUIRED_PREFIX="feature/"  # Change this to your desired prefix
+          if [[ ! $BRANCH_NAME =~ ^$REQUIRED_PREFIX ]]; then
+            echo "Error: Branch name '$BRANCH_NAME' does not start with '$REQUIRED_PREFIX'."
+            exit 1
+          else
+            echo "Branch name '$BRANCH_NAME' is valid."
+          fi
