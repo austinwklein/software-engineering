@@ -16,6 +16,8 @@
     --hot-red: oklch(61.42% 0.238 15.34);
     --orange-red: oklch(63.32% 0.24 31.68);
 
+    --dark-background: #1b1f28;
+
     --gray-900: oklch(19.37% 0.006 300.98);
     --gray-700: oklch(36.98% 0.014 302.71);
     --gray-400: oklch(70.9% 0.015 304.04);
@@ -61,7 +63,7 @@
     color: var(--gray-700);
   }
 
-  main {
+  main,app-test {
     width: 100%;
     min-height: 100%;
     display: flex;
@@ -70,6 +72,7 @@
     padding: 1rem;
     box-sizing: inherit;
     position: relative;
+    background-color: var(--dark-background);
   }
 
   .angular-logo {
