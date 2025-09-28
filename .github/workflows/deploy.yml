@@ -50,7 +50,7 @@ jobs:
             npm cache clean --force
 
             # Copy built files to web root (adjust path to your web server's root)
-            cp -r dist/my-angular-app/* /usr/share/nginx/SWE/test_root
+            cp -r dist/my-angular-app/browser/* /usr/share/nginx/SWE/test_root
 
             # Housekeeping: Set correct permissions for web server
             chown -R deploy-test:deploy-test /usr/share/nginx/SWE/test_root
