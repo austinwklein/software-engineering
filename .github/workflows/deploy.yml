@@ -24,7 +24,6 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ inputs.environment == 'dev' && secrets.DEV_HOST || secrets.PROD_HOST }} >> ~/.ssh/known_hosts
           echo "Host target\n  HostName ${{ inputs.environment == 'dev' && secrets.DEV_HOST || secrets.PROD_HOST }}\n  User ${{ inputs.environment == 'dev' && secrets.DEV_USER || secrets.PROD_USER }}\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking no" > ~/.ssh/config
 
       - name: Deploy via SSH
