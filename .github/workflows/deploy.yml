@@ -32,6 +32,7 @@ jobs:
           host: ${{ inputs.environment == 'dev' && secrets.DEV_HOST || secrets.PROD_HOST }}
           username: ${{ inputs.environment == 'dev' && secrets.DEV_USER || secrets.PROD_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
           script: |
             mkdir -p ~/test-dir
             cd ~/test-dir
