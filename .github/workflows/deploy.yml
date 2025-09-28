@@ -1,0 +1,63 @@
+name: Manual Deploy to Dev/Prod
+
+on:
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+    inputs:
+      environment:
+        description: 'Choose environment'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "Host target\n  HostName ${{ inputs.environment == 'dev' && secrets.DEV_HOST || secrets.PROD_HOST }}\n  User ${{ inputs.environment == 'dev' && secrets.DEV_USER || secrets.PROD_USER }}\n  IdentityFile ~/.ssh/id_ed25519\n  StrictHostKeyChecking no" > ~/.ssh/config
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3  # Popular action for SSH commands; or use inline if preferred
+        with:
+          host: ${{ inputs.environment == 'dev' && secrets.DEV_HOST || secrets.PROD_HOST }}
+          username: ${{ inputs.environment == 'dev' && secrets.DEV_USER || secrets.PROD_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            mkdir -p ~/test-dir
+            cd ~/test-dir
+
+            # Pull the latest code
+            git pull origin main
+
+            # Install dependencies (use --frozen-lockfile for reproducibility)
+            npm ci
+
+            # Build the Angular app (use --configuration=production for prod)
+            ng build ${{ inputs.environment == 'prod' && '--configuration=production' || '' }}
+
+            # Housekeeping: Clear any cache (e.g., Angular cache or npm cache)
+            npm cache clean --force
+
+            # Copy built files to web root (adjust path to your web server's root)
+            cp -r dist/my-angular-app/browser/* /usr/share/nginx/SWE/test_root
+
+            # Housekeeping: Set correct permissions for web server
+            chown -R deploy-test:deploy-test /usr/share/nginx/SWE/test_root
+            chmod -R 755 /usr/share/nginx/SWE/test_root
+
+            # Restart web server (e.g., Nginx, adjust if using Apache or another)
+            sudo systemctl restart nginx
+
+            # Log deployment
+            echo "Deployed to ${{ inputs.environment }} at $(date)"
