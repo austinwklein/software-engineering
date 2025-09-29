@@ -1,0 +1,72 @@
+name: Manual Deploy to Test/Dev/Prod
+
+on:
+  workflow_dispatch:  # Allows manual trigger from GitHub UI
+    inputs:
+      environment:
+        description: 'Choose environment'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - dev
+          - prod
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: deploy-${{ inputs.environment }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            DEPLOY_DIR=~/${{ inputs.environment }}-git-repo
+            WEB_ROOT=/usr/share/nginx/SWE/${{ inputs.environment }}_root
+            REPO_URL=https://github.com/${{ github.repository }}.git
+            BRANCH=${{ inputs.environment == 'prod' && 'main' || inputs.environment }}
+
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              mkdir -p "$DEPLOY_DIR"
+            fi
+
+            cd "$DEPLOY_DIR"
+
+            if [ ! -d .git ]; then
+              git clone -b "$BRANCH" "$REPO_URL" .
+            else
+              git fetch origin
+              git checkout -f "$BRANCH"
+              git reset --hard origin/"$BRANCH"
+            fi
+
+            # Install dependencies (use --frozen-lockfile for reproducibility)
+            npm ci
+
+            # Build the Angular app (use --configuration=production for prod)
+            ng build ${{ inputs.environment == 'prod' && '--configuration=production' || '' }}
+
+            # Housekeeping: Clear any cache (e.g., Angular cache or npm cache)
+            npm cache clean --force
+
+            # Reset web root then copy built files
+            rm -rf "$WEB_ROOT"/*
+            mkdir -p "$WEB_ROOT"
+            cp -r dist/my-angular-app/browser/* "$WEB_ROOT"
+
+            # Housekeeping: Set correct permissions for web server
+            chown -R $USER:$USER "$WEB_ROOT"
+            chmod -R 755 "$WEB_ROOT"
+
+            # Restart web server (e.g., Nginx, adjust if using Apache or another)
+            sudo systemctl restart nginx
+
+            # Log deployment
+            echo "Deployed to ${{ inputs.environment }} at $(date)"
